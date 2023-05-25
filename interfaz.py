@@ -3,28 +3,8 @@ import datetime
 from threading import Thread, Event
 from PIL import Image
 
-#import connection as conn
 from basedatos import connection as conn
 from basedatos import db_entry as _entry
-#import db_entry as _entry
-
-
-#un boton en la interfaz principal para elegir el tipo de servicio requerido directamente
-#en la parte de vehiculos deberan aparecer los servicios que se van registrando, con el ultimo servicio que se les realizo
-#y en la parte de servicios deberan aparecer los servicios pendientes, con un boton para eliminiar (o marcar como hechos) los servicios que ya fueron realizados
-
-"""
-#
-#
-#
-#
-#               SE VA A QUEDAR PENDIENTE QUE ACTUALICE LOS MODELOS AL SELECCIONAR EL FABRICANTE
-#               Y QUE ACTUALICE LA DIRECCION DEL CLIENTE AL SELECCIONAL EL DUEÑO
-#
-#
-#
-#
-"""
 
 
 class App(customtkinter.CTk):
@@ -94,28 +74,10 @@ class App(customtkinter.CTk):
                                                       image=self.car_logo, anchor="w", command=self.vehicles_button_event)
         self.vehicles_button.grid(row=2, column=0, sticky="ew")
 
-            #BOTON:  pestaña 3 (Servicios) - para mi es la principal, estará el registro de servicios
-        self.services_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Servicios",
-                                                      fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
-                                                      image=self.service_logo, anchor="w", command=self.services_button_event)
-        self.services_button.grid(row=3, column=0, sticky="ew")
-
             #No tiene importancia, es para poder elegir el tema o color de la app
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(self.navigation_frame, values=["Dark", "Light"],
                                                                 command=self.change_appearance_mode_event)
         self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20, sticky="s")
-
-
-
-        """
-
-
-        TODo ESTO ES PARA EL HOME FRAME, O DONDE SE AGREGAN LOS VEHICULOS
-
-
-
-
-        """
 
         #                   HOMEFRAME
 
@@ -130,33 +92,84 @@ class App(customtkinter.CTk):
         self.home_frame.grid_rowconfigure(4, weight=2)
         self.home_frame.grid_rowconfigure(5, weight=2)
 
-        """self.home_frame_label = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.home_frame_label.grid_columnconfigure(1, weight=0)"""
-
         self.home_frame_large_image_label = customtkinter.CTkLabel(self.home_frame, text="", image=self.entry_data_image, anchor="center")
         self.home_frame_large_image_label.grid(row=0, column=0, padx=15, pady=8)
         self.home_frame_large_image_label.grid_configure(columnspan=2)
 
-        """self.home_frame_button_1 = customtkinter.CTkButton(self.home_frame, text="", image=self.image_icon_image)
-        self.home_frame_button_1.grid(row=1, column=0, padx=20, pady=10)
-        self.home_frame_button_2 = customtkinter.CTkButton(self.home_frame, text="CTkButton", image=self.image_icon_image, compound="right")
-        self.home_frame_button_2.grid(row=2, column=0, padx=20, pady=10)
-        self.home_frame_button_3 = customtkinter.CTkButton(self.home_frame, text="CTkButton", image=self.image_icon_image, compound="top")
-        self.home_frame_button_3.grid(row=3, column=0, padx=20, pady=10)
-        self.home_frame_button_4 = customtkinter.CTkButton(self.home_frame, text="CTkButton", image=self.image_icon_image, compound="bottom", anchor="w")
-        self.home_frame_button_4.grid(row=4, column=0, padx=20, pady=10)"""
-            #menu para fabricantes - datos vehiculo
+        self.home_frame_info_loading()
 
-        """ #OJO
+        #                   VEHICLES FRAME
 
+        # create second frame
+        self.second_frame = customtkinter.CTkScrollableFrame(self, corner_radius=0, fg_color="transparent")
+        self.second_frame.grid_columnconfigure(1, weight=2)
+        self.second_frame.grid_rowconfigure(4, weight=2)
 
+        self.second_second_frame = customtkinter.CTkFrame(self.second_frame, corner_radius=0, fg_color="transparent")
+        self.second_second_frame.grid(row=4, column=1)
 
-             Si se quita lo de sticky, cambian completamente la forma de los botones
-             Tambien se deberán quitar los pesos en la configuracion del frame
+        #self.second_frame_scrollbar = customtkinter.CTkScrollableFrame(self.second_frame, command=self.second_frame.yview)
+        #self.second_frame.configure(yscrollcommand=self.second_frame_scrollbar.set)
 
+        self.second_frame_page = 0 #Esta variable nos dice la pagina en la que se encuentra
+        self.second_frame_next_page_button = customtkinter.CTkButton(self.second_second_frame, text="Siguiente Página", image=self.next_image, compound="right",
+                                                           font=("BOLD",15), command=self.vehicle_frame_next_page)
+        self.second_frame_next_page_button.grid(row=0, column=1, padx=20, pady=20, sticky="nse")
+        self.second_frame_previous_page_button = customtkinter.CTkButton(self.second_second_frame, text="Página Anterior", image=self.previous_image, compound="left",
+                                                           font=("BOLD",15), command=self.vehicle_frame_previous_page)
+        self.second_frame_previous_page_button.grid(row=0, column=0, padx=20, pady=20, sticky="nsw")
 
+        #   label
+        self.vehicles_frame_large_image_label = customtkinter.CTkLabel(self.second_frame, text="", image=self.vehicles_label, anchor="center")
+        self.vehicles_frame_large_image_label.grid(row=0, column=0, padx=15, pady=8)
+        self.vehicles_frame_large_image_label.grid_configure(columnspan=2)
 
-        """
+        #Aqui se reclama toda la informacion de los vehiculos al arbir la app
+        self.get_vehicle_frame_data()
+
+        #Esto es para darle formato una vez se crea, ya que con el scrollableframe, pierde la geometria predefinida
+        self.geometry("900x600")
+
+        # select default frame
+        self.select_frame_by_name("home")
+
+        #select default scaling
+        customtkinter.set_widget_scaling(1.2)
+        customtkinter.set_appearance_mode("Dark")
+
+    def select_frame_by_name(self, name):
+        # set button color for selected button
+        self.home_button.configure(fg_color=("gray75", "gray25") if name == "home" else "transparent")
+        self.vehicles_button.configure(fg_color=("gray75", "gray25") if name == "vehicles" else "transparent")
+
+        # show selected frame
+        if name == "home":
+            self.home_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.home_frame.grid_forget()
+        if name == "vehicles":
+            self.second_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.second_frame.grid_forget()
+
+    def home_button_event(self):
+        self.select_frame_by_name("home")
+
+    def vehicles_button_event(self):
+        self.select_frame_by_name("vehicles")
+
+    def services_button_event(self):
+        self.select_frame_by_name("services")
+
+    def change_appearance_mode_event(self, new_appearance_mode):
+        customtkinter.set_appearance_mode(new_appearance_mode)
+        if new_appearance_mode == "Dark":
+            self.photo_path_button.configure(fg_color = "#565b5e")
+        else:
+            self.photo_path_button.configure(fg_color = "#95989B")
+
+    def home_frame_info_loading(self):
+
 
         self.combobox_fabricante = customtkinter.CTkComboBox(self.home_frame,
                                                         values=self.connection_db.query_column_data_5pos('fabricantes','fabricante_nombre'))
@@ -220,121 +233,6 @@ class App(customtkinter.CTk):
                                                            font=("BOLD",15), command=self.home_vehicle_save_button_event)
         self.home_frame_button_2.grid(row=5, column=0, padx=20, pady=20, sticky="ew")
         self.home_frame_button_2.grid_configure(columnspan=2)
-
-        """    #menu para nombre del dueño - dueño_carrp
-        self.combobox_nombre_dueno = customtkinter.CTkComboBox(self.home_frame,
-                                                        values=self.connection_db.query_column_data_5pos('modelo_de_carro','modelo_nombre'))
-        self.combobox_nombre_dueno.grid(row=3, column=0, padx=20, pady=(20, 10))
-            #menu para direccion del dueño - dueño_carro
-        self.combobox_dir_dueno = customtkinter.CTkComboBox(self.home_frame,
-                                                        values=self.connection_db.query_column_data_5pos('carros','color'))
-        self.combobox_dir_dueno.grid(row=4, column=0, padx=20, pady=(20, 10))"""
-
-
-
-
-        """
-
-
-        TODo ESTO ES PARA EL SECOND FRAME, O DONDE SE MUESTRAN LOS VEHICULOS
-
-
-
-
-        """
-
-
-        #                   VEHICLES FRAME
-
-        # create second frame
-        self.second_frame = customtkinter.CTkScrollableFrame(self, corner_radius=0, fg_color="transparent")
-        self.second_frame.grid_columnconfigure(1, weight=2)
-        self.second_frame.grid_rowconfigure(4, weight=2)
-
-        self.second_second_frame = customtkinter.CTkFrame(self.second_frame, corner_radius=0, fg_color="transparent")
-        self.second_second_frame.grid(row=4, column=1)
-
-        #self.second_frame_scrollbar = customtkinter.CTkScrollableFrame(self.second_frame, command=self.second_frame.yview)
-        #self.second_frame.configure(yscrollcommand=self.second_frame_scrollbar.set)
-
-
-        self.second_frame_page = 0 #Esta variable nos dice la pagina en la que se encuentra
-        self.second_frame_next_page_button = customtkinter.CTkButton(self.second_second_frame, text="Siguiente Página", image=self.next_image, compound="right",
-                                                           font=("BOLD",15), command=self.vehicle_frame_next_page)
-        self.second_frame_next_page_button.grid(row=0, column=1, padx=20, pady=20, sticky="nse")
-        self.second_frame_previous_page_button = customtkinter.CTkButton(self.second_second_frame, text="Página Anterior", image=self.previous_image, compound="left",
-                                                           font=("BOLD",15), command=self.vehicle_frame_previous_page)
-        self.second_frame_previous_page_button.grid(row=0, column=0, padx=20, pady=20, sticky="nsw")
-
-        #   label
-        self.vehicles_frame_large_image_label = customtkinter.CTkLabel(self.second_frame, text="", image=self.vehicles_label, anchor="center")
-        self.vehicles_frame_large_image_label.grid(row=0, column=0, padx=15, pady=8)
-        self.vehicles_frame_large_image_label.grid_configure(columnspan=2)
-
-        #Aqui se reclama toda la informacion de los vehiculos al arbir la app
-        self.get_vehicle_frame_data()
-
-        #Esto es para darle formato una vez se crea, ya que con el scrollableframe, pierde la geometria predefinida
-        self.geometry("900x600")
-
-
-
-
-
-        # create third frame
-        self.third_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.services_frame_large_image_label = customtkinter.CTkLabel(self.third_frame, text="", image=self.services_label, anchor="center")
-        self.services_frame_large_image_label.grid(row=0, column=0, padx=15, pady=8)
-        self.services_frame_large_image_label.grid_configure(columnspan=2)
-
-        self.get_services_frame_data()
-
-
-
-
-
-        # select default frame
-        self.select_frame_by_name("home")
-
-        #select default scaling
-        customtkinter.set_widget_scaling(1.2)
-        customtkinter.set_appearance_mode("Dark")
-
-    def select_frame_by_name(self, name):
-        # set button color for selected button
-        self.home_button.configure(fg_color=("gray75", "gray25") if name == "home" else "transparent")
-        self.vehicles_button.configure(fg_color=("gray75", "gray25") if name == "vehicles" else "transparent")
-        self.services_button.configure(fg_color=("gray75", "gray25") if name == "services" else "transparent")
-
-        # show selected frame
-        if name == "home":
-            self.home_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.home_frame.grid_forget()
-        if name == "vehicles":
-            self.second_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.second_frame.grid_forget()
-        if name == "services":
-            self.third_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.third_frame.grid_forget()
-
-    def home_button_event(self):
-        self.select_frame_by_name("home")
-
-    def vehicles_button_event(self):
-        self.select_frame_by_name("vehicles")
-
-    def services_button_event(self):
-        self.select_frame_by_name("services")
-
-    def change_appearance_mode_event(self, new_appearance_mode):
-        customtkinter.set_appearance_mode(new_appearance_mode)
-        if new_appearance_mode == "Dark":
-            self.photo_path_button.configure(fg_color = "#565b5e")
-        else:
-            self.photo_path_button.configure(fg_color = "#95989B")
 
     def get_vehicle_frame_data(self):
         self.carros_lib = self.connection_db.raw_manual_query("select carro_id, fecha_de_creacion, color, fabricante_id, carro_detalles, modelo_carro_id, dueno_id, path_to_image from carros")
@@ -704,18 +602,25 @@ class App(customtkinter.CTk):
 
     def combobox_ano_event(self):
         self.entry.fecha_de_creacion = self.combobox_ano.get()
+
     def combobox_color_event(self):
         self.entry.color = self.combobox_color.get()
+
     def combobox_detalles_event(self):
         self.entry.carro_detalles = self.combobox_detalles.get()
+
     def combobox_direccion_event(self):
         self.entry.dueno_dirreccion = self.combobox_direccion.get()
+
     def combobox_fabricante_event(self):
         self.entry.fabricante_nombre = self.combobox_fabricante.get()
+
     def combobox_modelo_event(self):
         self.entry.modelo_nombre = self.combobox_modelo.get()
+
     def combobox_nombre_event(self):
         self.entry.nombre = self.combobox_nombre.get()
+
     def photo_path_button_event(self):
         self.entry.path_to_image = self.file_explorer.open_file()
         self.entry.image = self.file_explorer.file_name
@@ -764,15 +669,14 @@ class App(customtkinter.CTk):
         self.combobox_direccion.configure(values=self.connection_db.query_column_data_5pos('dueno_carro', 'dueno_direccion'))
         print("\nprint para asegurarme que se actualicen los combobox\n")
 
-
     def update_combobox_direccion(self):
         self.combobox_direccion['values'] = self._category_dir[self.combobox_nombre.get()]
         #self.combobox_direccion.configure(values=valores)
         #self.combobox_direccion._values = valores
+
     def set_combobox_direccion(self):
         self.combobox_direccion['values'] = self._category_dir[self.combobox_nombre.get()]
         return self._category_dir[self.combobox_nombre.get()]
-
 
 
 if __name__ == "__main__":
